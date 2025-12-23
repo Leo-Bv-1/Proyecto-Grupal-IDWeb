@@ -14,10 +14,12 @@ def crear_usuario(gmail, nombre, contrasenia, recibir_correos):
     cursor = conn.cursor()
     try:
         sql = """
-            INSERT INTO usuario (gmail, nombre, contrasenia, recibir_correos)
+            INSERT INTO usuarios (gmail, nombre, contrasenia, recibir_correos)
             VALUES (%s, %s, %s, %s)
         """
-        cursor.execute(sql, (gmail, nombre, contrasenia, recibir_correos))
+        # recibir_correos es tinyint(1), aseguramos que sea 0 o 1
+        val_recibir = 1 if recibir_correos else 0
+        cursor.execute(sql, (gmail, nombre, contrasenia, val_recibir))
         conn.commit()
         return True
     except Exception as e:
@@ -32,13 +34,9 @@ def leer_usuario(gmail):
     conn = get_conexion()
     cursor = conn.cursor(dictionary=True)
     try:
-        sql = "SELECT * FROM usuario WHERE gmail = %s"
+        sql = "SELECT * FROM usuarios WHERE gmail = %s"
         cursor.execute(sql, (gmail,))
         usuario = cursor.fetchone()
-
-        if usuario is None:
-            raise Exception(f"No existe usuario con gmail {gmail}")
-
         return usuario
     except Exception as e:
         print("Error al obtener usuario:", e)
@@ -47,11 +45,17 @@ def leer_usuario(gmail):
         cursor.close()
         conn.close()
 
+def validar_usuario(gmail, contrasenia):
+    usuario = leer_usuario(gmail)
+    if usuario and usuario['contrasenia'] == contrasenia:
+        return usuario
+    return None
+
 def leer_usuarios():
     conn = get_conexion()
     cursor = conn.cursor(dictionary=True)
     try:
-        sql = "SELECT * FROM usuario"
+        sql = "SELECT * FROM usuarios"
         cursor.execute(sql)
         usuarios = cursor.fetchall()
         return usuarios
@@ -67,13 +71,14 @@ def actualizar_usuario(gmail, nombre, contrasenia, recibir_correos):
     cursor = conn.cursor()
     try:
         sql = """
-            UPDATE usuario
+            UPDATE usuarios
             SET nombre = %s,
                 contrasenia = %s,
                 recibir_correos = %s
             WHERE gmail = %s
         """
-        cursor.execute(sql, (nombre, contrasenia, recibir_correos, gmail))
+        val_recibir = 1 if recibir_correos else 0
+        cursor.execute(sql, (nombre, contrasenia, val_recibir, gmail))
         conn.commit()
 
         if cursor.rowcount == 0:
@@ -91,7 +96,7 @@ def borrar_usuario(gmail):
     conn = get_conexion()
     cursor = conn.cursor()
     try:
-        sql = "DELETE FROM usuario WHERE gmail = %s"
+        sql = "DELETE FROM usuarios WHERE gmail = %s"
         cursor.execute(sql, (gmail,))
         conn.commit()
 
